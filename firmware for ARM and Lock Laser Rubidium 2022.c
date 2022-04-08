@@ -32,6 +32,7 @@
 #include "grlib/grlib.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include "driverlib/flash.h"
 //*****************************************************************************
 //
 // SSI registers (SSI0)
@@ -146,21 +147,33 @@
 #define PA6 (*((volatile unsigned long *)0x40004100))
 #define PA7 (*((volatile unsigned long *)0x40004200))
 
-                    /* DDS AD9959 */ 
+// Flash ROM addresses must be 1k byte aligned, e.g., 0x8000, 0x8400, 0x8800...
+#define FLASH                   0x10000  // location in flash to write; make sure no program code is in this block
+#define FLASH1                  0x10400
 
+                    /* DDS AD9959 */ 
 short CSR_ADRESS = 0x00;                  // AD9959 CSR adresss Byte
+int CSR_NUM_BYTE = 0x01;                  // AD9959 byte number by CSR 
 long CSR0 = 0x10;                         // AD9959 CH0  MSB first
 long CSR1 = 0x20;                         // AD9959 CH1  MSB first
 long CSR2 = 0x40;                         // AD9959 CH2  MSB first
 long CSR3 = 0x80;                         // AD9959 CH3  MSB first
-int CSR_NUM_BYTE = 0x01;                  // AD9959 byte number by CSR 
+
                   
 short FTW_ADRESS = 0x04;                  // AD9959 FTW adresss Byte 
+int FTW_NUM_BYTE = 0x04;
 long FTW0 = 0x51EB851;      // AD9959 Frequency Tuning Word_0 10 MHz @ Clk=500MHz 1GHz /2  
-long FTW1 = 0x51EB851;      // AD9959 Frequency Tuning Word_0 10 MHz @ Clk=500MHz 1GHz /2 
-long FTW2 = 0x51EB851;      // AD9959 Frequency Tuning Word_0 10 MHz @ Clk=500MHz 1GHz /2 
-long FTW3 = 0x51EB851;      // AD9959 Frequency Tuning Word_0 10 MHz @ Clk=500MHz 1GHz /2 
-int FTW_NUM_BYTE = 0x04;                  // AD9959 byte number by FTW 
+long FTW1;
+long FTW2;
+long FTW3;
+    
+short ACR_ADRESS = 0x06;                 // AD9959 ACR (Amp Ctrl Register)addresss Byte
+int ACR_NUM_BYTE = 0x03;                  // AD9959 byte number by ACR 
+long ACR0 = 0x1400;       // full DAC = 0x1400 10bits OV output  Manual mode is selected by programming ACR <12:11> = 10.
+long ACR1; 
+long ACR2;       
+long ACR3;
+
 int i = 0;
 int j = 0;
 int t = 0;
@@ -168,13 +181,16 @@ char data;
 char temp[6];
 unsigned long mot_32bits;
 int amplitude_CH1;
+uint32_t FTW1_memory[1];
+uint32_t ACR1_memory[1];
+long read_byte1;
+long read_flash1;
+int read_byte2;
+int read_flash2;
 
 //fonctions//
 void write_immediate(void);
-void write_to_channel_AD9858(long freq);
 void ssi0PutData( int instruction,long data,int num_byte);
-void onButtonUp(void);
-void onButtonDown(void);
 void UARTIntHandler(void);
 void GPIOIntHandler(void);
 void interrupt_portA(void);
@@ -356,11 +372,19 @@ void write_immediate()
   mot_32bits = ((unsigned long)(temp[3]) << 24) | ((unsigned long)(temp[2]) << 16) | ((unsigned long)(temp[1]) << 8) | ((unsigned long)(temp[0]));
   amplitude_CH1 =  ((unsigned long)(temp[5]) << 8) | ((unsigned long)(temp[4]));
   FTW1 = (mot_32bits * 4294967296 / 500000000); //Convert to command for DDS  //ad9959 
-  PD3 =0x00; // AD9959 CS= 0
+  PD3 =0x00; // AD9959 CS= 0  
+  //place in flash memory frequency //
+  FTW1_memory[0] = (long)FTW1;
+  ACR1_memory[0] = 0x1000 + amplitude_CH1;
+  FlashErase(FLASH),FlashErase(FLASH1);
+  FlashProgram(FTW1_memory, FLASH, sizeof(FTW1_memory));
+  FlashProgram(ACR1_memory, FLASH1, sizeof(ACR1_memory));
   ssi0PutData(CSR_ADRESS,CSR1,CSR_NUM_BYTE); 
   ssi0PutData(FTW_ADRESS,FTW1,FTW_NUM_BYTE);
-  SysCtlDelay(20000);
+  ssi0PutData(ACR_ADRESS,0x1000 + amplitude_CH1,ACR_NUM_BYTE);
+  SysCtlDelay(2000);
   PD1 =0x02; // AD9959 I/O update
+  SysCtlDelay(20);
   PD1 =0x00;
   PD3 =0x08; // AD9959 CS= 1
 }
@@ -425,13 +449,23 @@ int main(void)
     PD0 =0x00;    // NO power down
     PD3 =0x00;    // AD9959 CS= 0
     PD2 =0x00; 
+    
+    read_byte1 =  *(unsigned  long *)FLASH;   //read FLASH for FTW1
+    read_flash1 = read_byte1;  
+    
+    read_byte2 =  *(unsigned  long *)FLASH1;   //read FLASH for ACR1
+    read_flash2 = read_byte2;  
+       
+       
     ssi0PutData(CSR_ADRESS,CSR0,CSR_NUM_BYTE);
     SysCtlDelay(2000);
     ssi0PutData(FTW_ADRESS,FTW0,FTW_NUM_BYTE);
     SysCtlDelay(2000);
     ssi0PutData(CSR_ADRESS,CSR1,CSR_NUM_BYTE); 
     SysCtlDelay(2000);
-    ssi0PutData(FTW_ADRESS,FTW1,FTW_NUM_BYTE);
+    ssi0PutData(FTW_ADRESS,read_flash1,FTW_NUM_BYTE);
+    SysCtlDelay(2000);
+    ssi0PutData(ACR_ADRESS,read_flash2,ACR_NUM_BYTE);
     SysCtlDelay(2000);
     PD1 =0x02; // AD9959 I/O update
     SysCtlDelay(2000);
