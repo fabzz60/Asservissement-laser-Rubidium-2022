@@ -396,17 +396,7 @@ void interrupt_portA(void)
                 GPIOIntRegister(GPIO_PORTA_BASE, interrupt_portA);   // Register our handler function for port A
                 GPIOIntTypeSet(GPIO_PORTA_BASE, GPIO_PIN_6,GPIO_RISING_EDGE);  // Configure PA6 for rising edge trigger
                 GPIOIntClear(GPIO_PORTD_BASE, GPIO_PIN_6);  // Clear interrupt flag 
-		PD3 =0x00; // AD9959 CS= 0
-                ssi0PutData(CSR_ADRESS,CSR1,CSR_NUM_BYTE); 
-                ssi0PutData(FTW_ADRESS,0xA3D70A2,FTW_NUM_BYTE);
-                SysCtlDelay(100);
-                PD1 =0x02; // AD9959 I/O update
-                SysCtlDelay(10);
-                PD1 =0x00;
-		GPIOIntRegister(GPIO_PORTA_BASE, interrupt_portA);	// Register our handler function for port A
-		GPIOIntTypeSet(GPIO_PORTA_BASE, GPIO_PIN_6,GPIO_RISING_EDGE);			// Configure PA6 for falling edge trigger
-		GPIOIntClear(GPIO_PORTF_BASE, GPIO_PIN_6);	// Clear interrupt flag
-                PD3 =0x08; // AD9959 CS= 1
+		//code ****//
 	}
         GPIOIntClear(GPIO_PORTA_BASE, GPIO_PIN_6);
 
@@ -415,17 +405,7 @@ void interrupt_portA(void)
                 GPIOIntRegister(GPIO_PORTA_BASE, interrupt_portA);   // Register our handler function for port A
                 GPIOIntTypeSet(GPIO_PORTA_BASE, GPIO_PIN_7,GPIO_RISING_EDGE);  // Configure PA7 for rising edge trigger
                 GPIOIntClear(GPIO_PORTD_BASE, GPIO_PIN_7);  // Clear interrupt flag 
-		PD3 =0x00; // AD9959 CS= 0
-                ssi0PutData(CSR_ADRESS,CSR1,CSR_NUM_BYTE); 
-                ssi0PutData(FTW_ADRESS,0x369D036,FTW_NUM_BYTE);
-                SysCtlDelay(100);
-                PD1 =0x02; // AD9959 I/O update
-                SysCtlDelay(10);
-                PD1 =0x00;
-		GPIOIntRegister(GPIO_PORTA_BASE, interrupt_portA);	// Register our handler function for port A
-		GPIOIntTypeSet(GPIO_PORTA_BASE, GPIO_PIN_7,GPIO_RISING_EDGE);			// Configure PA7 for falling edge trigger
-		GPIOIntClear(GPIO_PORTF_BASE, GPIO_PIN_7);	// Clear interrupt flag
-                PD3 =0x08; // AD9959 CS= 1
+		//code ****//
 	  }
           GPIOIntClear(GPIO_PORTA_BASE, GPIO_PIN_7);
 }
